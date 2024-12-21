@@ -1,7 +1,7 @@
- 
 import matplotlib.pyplot as plt
 import numpy as np
- 
+
+
 def SwedishPump(b):
     """
     @author: ofersh@telhai.ac.il
@@ -12,71 +12,70 @@ def SwedishPump(b):
     for k in range(1, n):
         E.append((b[:n - k].dot(b[k:])) ** 2)
     return (n ** 2) / (2 * sum(E))
- 
+
+
 def SimulatedAnnealing(n=100, max_evals=1000, variation=lambda x: x + 2.0 * np.random.normal(size=len(x)),
-                       func=lambda x: x.dot(x), seed=None):
+                       func=lambda x: x.dot(x), seed=None, alpha=0.99):
     """
     @author: ofersh@telhai.ac.il
     """
-    T_init = 6.0
+    T_init = 5
     T_min = 1e-4
-    alpha = 0.99
-    f_lower_bound = 0
+    f_upper_bound = np.inf
     eps_satisfactory = 1e-5
-    max_internal_runs = 1000
+    max_internal_runs = 200
     local_state = np.random.RandomState(seed)
     history = []
-    xbest = xmin = np.random.choice([1, -1], size=n)
-    fbest = fmin = func(xmin)
+    xbest = xmax = np.random.choice([1, -1], size=n)
+    fbest = fmax = func(xmax)
     eval_cntr = 1
     T = T_init
-    history.append(fmin)
+    history.append(fmax)
+
     while (T > T_min) and eval_cntr < max_evals:
         for _ in range(max_internal_runs):
-            x = variation(xmin)
+            x = variation(xmax)
             f_x = func(x)
             eval_cntr += 1
-            dE = f_x - fmin
-            if dE <= 0 or local_state.uniform(size=1) < np.exp(-dE / T):
-                xmin = x
-                fmin = f_x
-            if fmin < fbest:
+            dE = f_x - fmax
+            if dE >= 0 or local_state.uniform(size=1) < np.exp(dE / T):
+                xmax = x
+                fmax = f_x
+            if fmax > fbest:
                 fbest = f_x
                 xbest = x
-                if fbest < f_lower_bound + eps_satisfactory:
+                if fbest > f_upper_bound - eps_satisfactory:
                     T = T_min
                     break
-            history.append(fmin)
-            # if np.mod(eval_cntr, int(max_evals / 10)) == 0:
-            #     print(eval_cntr, " evals: fmin=", fmin)
-
+            history.append(fmax)
         T *= alpha
     return xbest, fbest, history
- 
+
+
 def monte_carlo(n=100, evals=1000, func=SwedishPump):
     """
     @author: ofersh@telhai.ac.il
     """
     X = []
     FX = []
-    fmin = 0
-    xmin = 0
+    fmax = -np.inf
+    xmax = 0
     f_history = []
+    best_iteration = 0
+
     for i in range(evals):
         x = np.random.choice([1, -1], size=n)
         f_x = func(x)
         X.append(x)
         FX.append(f_x)
-        if i == 0:
-            fmin = f_x
-            xmin = x
-        else:
-            if fmin > f_x:
-                fmin = f_x
-                xmin = x
-        f_history.append(fmin)  # Track the best f(x) at each iteration
-    return fmin, xmin, f_history
- 
+        if f_x > fmax:
+            fmax = f_x
+            xmax = x
+            best_iteration = i + 1  # Iterations start from 1
+        f_history.append(fmax)  # Track the best f(x) at each iteration
+    return fmax, xmax, f_history
+
+
 def Swap_Multiple_Pairs(x, randomness_factor=0.1, seed=None):
     """
     @author: ChatGPT
@@ -96,59 +95,53 @@ def Swap_Multiple_Pairs(x, randomness_factor=0.1, seed=None):
         i, j = np.random.choice(len(x), size=2, replace=False)
         x[i], x[j] = x[j], x[i]
     return x
- 
+
+
 n = 100
-eval = 1000000
-alpha = 0.4
+evals = 1000000
+num_runs = 10
+alpha = 0.99  # Single alpha value
 func_res = {}
 history_dict = {}
- 
-fbest = []
-xbest = []
-history = []  # for ploting
+# Run Simulated Annealing with a single alpha value
+fbest_runs = []
+history_runs = []
 
-xmin, fmin, h = SimulatedAnnealing(n, eval, Swap_Multiple_Pairs, SwedishPump, seed=17)
-fbest.append(fmin)
-xbest.append(xmin)
-history.append(h)
+for run in range(num_runs):
+    xmax, fmax, h = SimulatedAnnealing(n, evals, Swap_Multiple_Pairs, SwedishPump, seed=run, alpha=alpha)
+    fbest_runs.append(fmax)
+    history_runs.append(h)
 
-key = f"alpha {alpha} - evals {eval} - {Swap_Multiple_Pairs.__name__}"
-func_res[key] = min(fbest)
-history_dict[key] = history  # Store the history for plotting
- 
-best_setting = min(func_res, key=func_res.get)
-print(f"Best setting is: {best_setting} with value: {func_res[best_setting]}")
+max_fbest_index = np.argmax(fbest_runs)
+max_fbest = fbest_runs[max_fbest_index]
+max_history = history_runs[max_fbest_index]
+key = f"Simulated Annealing Alpha={alpha}"
+func_res[key] = {"fbest": max_fbest, "history": max_history}
+best_setting_key = max(func_res, key=lambda k: func_res[k]["fbest"])
+best_history = func_res[best_setting_key]["history"]
 
- 
-fmin_mc, xmin_mc, f_history_mc = monte_carlo(n, 1000000, SwedishPump)
-print(f"Best f(x) found from Monte Carlo is: {fmin_mc}")
- 
+print(f"{best_setting_key}: Best f(x): {func_res[best_setting_key]['fbest']:.4f}")
+
+fmax_mc, xmax_mc, f_history_mc = monte_carlo(n, evals, SwedishPump)
+print(f"Best f(x) found from Monte Carlo is: {fmax_mc}")
+
 """
 @author: ChatGPT
 """
 fig, ax = plt.subplots(figsize=(10, 5))
 
-# Plot Simulated Annealing history
-avg_history = np.mean(history, axis=0)
-ax.plot(avg_history, label=f"Simulated Annealing (evals={eval})", color='b')
-
-# Plot the Monte Carlo history
+ax.plot(best_history, label=f"Best Simulated Annealing Alpha={alpha}", color='b')
 ax.plot(f_history_mc, label='Monte Carlo', linestyle='--', color='r')
 
-# Customize the plot
-ax.set_title(f"Alpha={alpha} - Function Comparisons")
+ax.set_title("Best Simulated Annealing vs Monte Carlo")
 ax.set_xlabel('Iteration')
 ax.set_ylabel('Objective Function Value (f(x))')
 ax.legend()
 ax.grid(True)
 
 # Save the plot
-plot_filename = f"plot_{alpha}.png"
-fig.savefig(plot_filename, dpi=300)
+fig.savefig("plot_best_setting_vs_monte_carlo.png", dpi=300)
 
 # Adjust the layout and show the plot
 plt.tight_layout()
 plt.show()
- 
-
- 
