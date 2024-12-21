@@ -1,6 +1,6 @@
+
 import matplotlib.pyplot as plt
 import numpy as np
-
 
 def SwedishPump(b):
     """
@@ -12,7 +12,6 @@ def SwedishPump(b):
     for k in range(1, n):
         E.append((b[:n - k].dot(b[k:])) ** 2)
     return (n ** 2) / (2 * sum(E))
-
 
 def SimulatedAnnealing(n=100, max_evals=1000, variation=lambda x: x + 2.0 * np.random.normal(size=len(x)),
                        func=lambda x: x.dot(x), seed=None, alpha=0.99):
@@ -49,8 +48,7 @@ def SimulatedAnnealing(n=100, max_evals=1000, variation=lambda x: x + 2.0 * np.r
                     break
             history.append(fmax)
         T *= alpha
-    return xbest, fbest, history
-
+    return xbest, fbest, history, eval_cntr
 
 def monte_carlo(n=100, evals=1000, func=SwedishPump):
     """
@@ -75,7 +73,6 @@ def monte_carlo(n=100, evals=1000, func=SwedishPump):
         f_history.append(fmax)  # Track the best f(x) at each iteration
     return fmax, xmax, f_history
 
-
 def Swap_Multiple_Pairs(x, randomness_factor=0.1, seed=None):
     """
     @author: ChatGPT
@@ -96,7 +93,6 @@ def Swap_Multiple_Pairs(x, randomness_factor=0.1, seed=None):
         x[i], x[j] = x[j], x[i]
     return x
 
-
 n = 100
 evals = 1000000
 num_runs = 10
@@ -106,42 +102,46 @@ history_dict = {}
 # Run Simulated Annealing with a single alpha value
 fbest_runs = []
 history_runs = []
+sa_eval_count = []
 
 for run in range(num_runs):
-    xmax, fmax, h = SimulatedAnnealing(n, evals, Swap_Multiple_Pairs, SwedishPump, seed=run, alpha=alpha)
+    xmax, fmax, h, eval_cntr = SimulatedAnnealing(n, evals, Swap_Multiple_Pairs, SwedishPump, seed=run, alpha=alpha)
     fbest_runs.append(fmax)
     history_runs.append(h)
+    sa_eval_count.append(eval_cntr)
 
+# Find the best run
 max_fbest_index = np.argmax(fbest_runs)
 max_fbest = fbest_runs[max_fbest_index]
+max_fiteration = sa_eval_count[max_fbest_index]
 max_history = history_runs[max_fbest_index]
-key = f"Simulated Annealing Alpha={alpha}"
-func_res[key] = {"fbest": max_fbest, "history": max_history}
-best_setting_key = max(func_res, key=lambda k: func_res[k]["fbest"])
-best_history = func_res[best_setting_key]["history"]
 
-print(f"{best_setting_key}: Best f(x): {func_res[best_setting_key]['fbest']:.4f}")
+print(f"Simulated Annealing Best f(x): {max_fbest}, Total evaluations: {max_fiteration}, alpha={alpha}")
 
 fmax_mc, xmax_mc, f_history_mc = monte_carlo(n, evals, SwedishPump)
-print(f"Best f(x) found from Monte Carlo is: {fmax_mc}")
+
+print(f"Monte Carlo Best f(x): {fmax_mc}, Total evaluations: {evals}")
 
 """
 @author: ChatGPT
 """
 fig, ax = plt.subplots(figsize=(10, 5))
 
-ax.plot(best_history, label=f"Best Simulated Annealing Alpha={alpha}", color='b')
-ax.plot(f_history_mc, label='Monte Carlo', linestyle='--', color='r')
+# Use evaluations as the x-axis
+sa_iterations = np.linspace(1, evals, len(max_history))
+mc_iterations = np.linspace(1, evals, len(f_history_mc))
 
-ax.set_title("Best Simulated Annealing vs Monte Carlo")
-ax.set_xlabel('Iteration')
-ax.set_ylabel('Objective Function Value (f(x))')
+ax.plot(sa_iterations, max_history, label=f"Simulated Annealing Alpha={alpha}", color='b')
+ax.plot(mc_iterations, f_history_mc, label='Monte Carlo', linestyle='--', color='r')
+
+ax.set_title("Comparison of Optimization Methods: Simulated Annealing vs Monte Carlo")
+ax.set_xlabel("Number of Evaluations")
+ax.set_ylabel("Objective Function Value (f(x))")
 ax.legend()
 ax.grid(True)
 
-# Save the plot
+# Save and show the plot
 fig.savefig("plot_best_setting_vs_monte_carlo.png", dpi=300)
-
-# Adjust the layout and show the plot
 plt.tight_layout()
 plt.show()
+
