@@ -8,7 +8,7 @@ import numpy as np
 
 from MyGA import MyGA
 
-NTrials = 10**3
+NTrials = 10 ** 4
 
 
 def computeTourLength(perm, Graph):
@@ -26,11 +26,25 @@ def roulette_wheel_selection(fitnessPop, mu):
     return np.random.choice(len(fitnessPop), size=mu, p=probabilities)
 
 
+def tournament_selection(fitnessPop, mu, tournament_size=3):
+    indices = []
+    for _ in range(mu):
+        # Randomly select a subset of individuals
+        subset = np.random.choice(len(fitnessPop), size=tournament_size, replace=False)
+        # Choose the individual with the best fitness
+        best = subset[np.argmin(fitnessPop[subset])]
+        indices.append(best)
+    return np.array(indices)
+
+
 if __name__ == "__main__":
-    myga = MyGA(150, (lambda x: x), roulette_wheel_selection, computeTourLength)
+    myga = MyGA(150, (lambda x: x), tournament_selection, computeTourLength)
     tourStat = []
     for k in range(NTrials):
         myga.run()
         tourStat.append(myga.fmin)
     plt.hist(tourStat, bins=100)
+    plt.ylabel('Frequency')  # Label for x-axis
+    plt.xlabel('Tour Length')  # Label for y-axis
+    plt.title('Histogram of Tour Lengths')
     plt.show()
