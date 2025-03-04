@@ -10,7 +10,7 @@ from MixedVariableObjectiveFunctions import setC
 Efunc, f_mixed = Efunc, f_mixed
 
 
-def OnePlusOneEvolutionStrategy(n, lb, ub, maxEvals=1e6, func=lambda x: x.dot(x), fstop=0, seed=None,
+def OnePlusOneEvolutionStrategy(n, lb, ub, maxEvals=5*1e5, func=lambda x: x.dot(x), fstop=0, seed=None,
                                     record_interval=50, beta=0.1):
     """
     (1+1)-Evolution Strategy with coordinate-wise exponential step-size adaptation.
@@ -115,7 +115,7 @@ def optimize_integer_part(xreal, lb, ub, n, max_evals, func, lam=0.5):
 
     evalcount = 0
     stuck_count = 0
-    stuck_threshold = 20  # If no improvement for 20 iterations, consider the search stuck.
+    stuck_threshold = 1000  # If no improvement for 20 iterations, consider the search stuck.
     jump_lam = lam  # Initial jump parameter for discrete Laplace.
     k_down = 0.9  # Factor to decrease jump_lam if jump is successful.
     k_up = 1.1  # Factor to increase jump_lam if jump is not successful.
@@ -180,7 +180,7 @@ if __name__ == "__main__":
     setC(N)
     c = 100
     lamda = 0.3
-    maxEvals = [10 ** 5, 10 ** 6, 10 ** 6]
+    maxEvals = [8*10 ** 4, 10 ** 5, 10 ** 5]
     NRUNS = 2
     X = np.full((3 * NRUNS, dim + 2), np.nan)
     plt.figure(figsize=(12, 6))
@@ -223,4 +223,3 @@ if __name__ == "__main__":
     plt.ylim(0, 500)
     plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=9, frameon=False)
     plt.show()
-
